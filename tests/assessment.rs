@@ -1,5 +1,6 @@
 use eyre::{bail, Result};
-use reqwest::get;
+use reqwest::{get, Client};
+use serde::{Deserialize, Serialize};
 
 const BASE_API_URL: &str = "http://localhost:3000";
 
@@ -51,4 +52,36 @@ async fn server_sets_custom_and_typed_header() -> Result<()> {
     assert_eq!(response.text().await?, "hello world");
 
     Ok(())
+}
+
+#[tokio::test]
+async fn server_gets_custom_and_typed_headers() -> Result<()> {
+    let url = format!("{BASE_API_URL}/get_custom_and_typed_headers");
+    let client = Client::new();
+    let response = client
+        .get(url)
+        .header("content-type", "application/json")
+        .header("token", "Bearer 1234567890")
+        .send()
+        .await?;
+
+    assert_eq!(response.status(), 200);
+
+    let response_headers = response.json::<ResponseHeaders>().await?;
+
+    assert_eq!(
+        response_headers,
+        ResponseHeaders {
+            content_type: "application/json".to_owned(),
+            token: "Bearer 1234567890".to_owned()
+        }
+    );
+
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct ResponseHeaders {
+    content_type: String,
+    token: String,
 }
